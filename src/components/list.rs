@@ -1,10 +1,13 @@
-use std::io::Stdout;
+use std::{fmt, io};
 
 use crossterm::cursor::MoveTo;
 use crossterm::event::{Event, KeyCode, KeyEventKind};
 use crossterm::style::{Color, SetForegroundColor, SetBackgroundColor, Print, ResetColor};
 use crossterm::execute;
 
+use crate::console::Console;
+
+use super::block::Block;
 use super::element::Element;
 
 
@@ -16,8 +19,7 @@ pub struct List {
 impl List {
     pub fn new(options: Vec<String>) -> Self {
         Self {
-            options,
-            selected: 0,
+            options, selected: 0,
         }
     }
 
@@ -35,7 +37,13 @@ impl List {
 }
 
 impl Element for List {
-    fn output(&mut self, stdout: &mut Stdout) -> std::io::Result<()> { 
+    fn output(
+        &mut self,
+        console: &mut Console,
+        target: &mut Block,
+    ) { 
+        target.reset();
+
         for (i, option) in self.options.iter().enumerate() {
             let (fg_color, bg_color) = if i == self.selected {
                 (Color::Black, Color::White)
@@ -45,18 +53,12 @@ impl Element for List {
             
             let output = option.trim().to_string();
 
-            execute!(
-                stdout,
-                MoveTo(0, i as u16),
-                SetForegroundColor(fg_color),
-                SetBackgroundColor(bg_color),
-                Print(output),
-                Print("\n"),
-                ResetColor,
-            )?;
+            target.to_line_start(console);
+            console.set_colors(fg_color, bg_color);
+            target.write_str(console, output.as_str());
+            console.reset_color();
+            target.next_line(console);
         }
-
-        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) -> std::io::Result<()> { 

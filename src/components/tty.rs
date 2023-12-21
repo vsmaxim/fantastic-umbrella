@@ -1,6 +1,6 @@
 use std::{
     sync::mpsc::{Receiver, TryRecvError, self},
-    io::{Stdout, Write},
+    io::Write,
     thread,
 };
 
@@ -14,7 +14,9 @@ use portable_pty::{
 
 use crossterm::event::{Event, KeyCode, KeyModifiers};
 
-use super::element::Element;
+use crate::console::Console;
+
+use super::{element::Element, block::Block};
 
 pub struct PtyView {
     pty_system: Box<dyn PtySystem>,
@@ -25,16 +27,18 @@ pub struct PtyView {
 }
 
 impl PtyView {
-    pub fn new() -> Self {
+    pub fn new(rows: u16, cols: u16) -> Self {
         // Launch neovim in pty
         let pty_system = native_pty_system();
 
-        let mut pair = pty_system.openpty(PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        }).expect("Couldn't open pty");
+        let mut pair = pty_system.openpty(
+            PtySize {
+                rows,
+                cols,
+                pixel_width: 0,
+                pixel_height: 0,
+            }
+        ).expect("Couldn't open pty");
 
         let mut cmd = CommandBuilder::new("nano");
 
@@ -83,15 +87,19 @@ impl PtyView {
 }
 
 impl Element for PtyView {
-    fn output(&mut self, stdout: &mut Stdout) -> std::io::Result<()> { 
+    fn output(
+        &mut self,
+        console: &mut Console,
+        target: &mut Block,
+    ) { 
         match self.rx.try_recv() {
             Ok(data) => {
-                stdout.write(data.as_slice())?;
-                stdout.flush()?;
-                Ok(())
+                target.reset();
+                target.write(console, data.as_slice());
+                console.flush();
             },
-            Err(TryRecvError::Empty) => Ok(()),
-            Err(TryRecvError::Disconnected) => Ok(()),
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => (),
         }
     }
 
