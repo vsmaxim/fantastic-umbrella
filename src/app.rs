@@ -87,7 +87,7 @@ impl Application {
 
             console.flush();
 
-            if event::poll(std::time::Duration::from_millis(100))? {
+            if event::poll(std::time::Duration::from_millis(10))? {
                 let event = event::read()?;
 
                 if let Event::Key(KeyEvent { 
