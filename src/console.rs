@@ -62,6 +62,14 @@ impl Console {
         self.stdout.write(v).unwrap();
     }
 
+    pub fn hide_cursor(&mut self) {
+        self.queue_safe(Hide);
+    }
+
+    pub fn show_cursor(&mut self) {
+        self.queue_safe(Show);
+    }
+
     pub fn flush(&mut self) {
         self.stdout.flush().expect("Couldn't flush");
     }

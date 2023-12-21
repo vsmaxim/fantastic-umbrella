@@ -1,4 +1,4 @@
-use crossterm::event::{KeyEvent, KeyCode, KeyEventState, KeyEventKind};
+use crossterm::event::{KeyEvent, KeyCode, KeyEventKind};
 
 use super::element::Element;
 
@@ -6,6 +6,7 @@ use super::element::Element;
 pub struct Input {
     value: String,
     to_empty: bool,
+    to_re_render: bool,
 }
 
 impl Input {
@@ -13,6 +14,7 @@ impl Input {
         Self { 
             value: String::new(),
             to_empty: false,
+            to_re_render: true,
         }
     }
 }
@@ -27,6 +29,7 @@ impl Element for Input {
         }
 
         target.write(console, self.value.as_bytes());
+        self.to_re_render = true;
     }
 
     fn on_event(&mut self, event: &crossterm::event::Event) -> std::io::Result<()> { 
@@ -35,12 +38,14 @@ impl Element for Input {
                 KeyCode::Char(c) => {
                     if *kind == KeyEventKind::Press {
                         self.value.push(*c);
+                        self.to_re_render = true;
                     }
                 },
                 KeyCode::Backspace | KeyCode::Delete => {
                     if *kind == KeyEventKind::Press {
                         self.value.pop();
                         self.to_empty = true;
+                        self.to_re_render = true;
                     }
                 },
                 KeyCode::Enter => {
@@ -50,5 +55,9 @@ impl Element for Input {
         }
 
         Ok(())
+    }
+
+    fn needs_re_render(&self) -> bool { 
+        self.to_re_render
     }
 }

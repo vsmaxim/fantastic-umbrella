@@ -47,13 +47,28 @@ impl Application {
         left_pane.render(&mut console);
 
         loop {
-            options_list.output(&mut console, &mut left_pane);
+            console.hide_cursor();
+            console.flush();
 
-            pty_view.output(&mut console, &mut right_pane);
-            right_pane.render(&mut console);
+            if options_list.needs_re_render() {
+                options_list.output(&mut console, &mut left_pane);
+            }
 
-            address_input.output(&mut console, &mut input_block);
-            input_block.render(&mut console);
+            if pty_view.needs_re_render() {
+                pty_view.output(&mut console, &mut right_pane);
+                right_pane.render(&mut console);
+            }
+
+            if address_input.needs_re_render() {
+                address_input.output(&mut console, &mut input_block);
+                input_block.render(&mut console);
+            }
+
+
+            if right_pane.is_active() {
+                right_pane.reset_cursor(&mut console);
+                console.show_cursor();
+            } 
 
             console.flush();
 
@@ -116,6 +131,7 @@ impl Application {
                                 } 
 
                                 if right_pane.is_selected() {
+                                    console.show_cursor();
                                     right_pane.set_state(BlockState::Active);
                                     right_pane.render(&mut console);
                                 }
@@ -139,6 +155,7 @@ impl Application {
                                 } 
 
                                 if right_pane.is_active() {
+                                    console.hide_cursor();
                                     right_pane.set_state(BlockState::Selected);
                                     right_pane.render(&mut console);
                                 }

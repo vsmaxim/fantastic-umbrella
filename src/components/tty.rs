@@ -12,7 +12,7 @@ use portable_pty::{
     PtyPair,
 };
 
-use crossterm::event::{Event, KeyCode, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyModifiers, KeyEvent};
 
 use crate::console::Console;
 
@@ -24,6 +24,39 @@ pub struct PtyView {
     rx: Receiver<Vec<u8>>, 
     writer: Box<dyn Write + Send>,
     buffer: [u8; 2048],
+}
+
+
+fn match_key_sequence(e: &Event) -> &str {
+    if let Event::Key(key_event) = e {
+         match key_event {
+            KeyEvent {
+                code: KeyCode::Esc, ..
+            } => "\x1b", // Escape
+            KeyEvent {
+                code: KeyCode::Enter, ..
+            } => "\r", // Carriage Return
+            KeyEvent {
+                code: KeyCode::Backspace, ..
+            } => "\x7f", // Backspace
+            KeyEvent {
+                code: KeyCode::Left, ..
+            } => "\x1b[D", // Arrow Left
+            KeyEvent {
+                code: KeyCode::Right, ..
+            } => "\x1b[C", // Arrow Right
+            KeyEvent {
+                code: KeyCode::Up, ..
+            } => "\x1b[A", // Arrow Up
+            KeyEvent {
+                code: KeyCode::Down, ..
+            } => "\x1b[B", // Arrow Down
+            // Add more keys and their sequences as needed
+            _ => "",
+        }
+    } else {
+        ""
+    }
 }
 
 impl PtyView {
@@ -87,6 +120,10 @@ impl PtyView {
 }
 
 impl Element for PtyView {
+    fn needs_re_render(&self) -> bool {
+        true
+    }
+
     fn output(
         &mut self,
         console: &mut Console,
@@ -94,7 +131,6 @@ impl Element for PtyView {
     ) { 
         match self.rx.try_recv() {
             Ok(data) => {
-                target.reset();
                 target.write(console, data.as_slice());
                 console.flush();
             },
@@ -124,12 +160,11 @@ impl Element for PtyView {
 
                     bytes
                 },
-                _ => {
-                    Vec::new()
-                },
+                _ => match_key_sequence(event).into(),
             };
 
-            self.writer.write(&input_bytes)
+            self.writer
+                .write(&input_bytes)
                 .expect("Couldn't write");
         }
 

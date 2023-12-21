@@ -14,12 +14,15 @@ use super::element::Element;
 pub struct List {
     options: Vec<String>,
     selected: usize,
+    to_re_render: bool,
 }
 
 impl List {
     pub fn new(options: Vec<String>) -> Self {
         Self {
-            options, selected: 0,
+            options,
+            selected: 0,
+            to_re_render: true,
         }
     }
 
@@ -27,12 +30,16 @@ impl List {
         if self.selected < self.options.len() - 1 {
             self.selected += 1;
         }
+
+        self.to_re_render = true
     }
 
     fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
+
+        self.to_re_render = true
     }
 }
 
@@ -59,6 +66,8 @@ impl Element for List {
             console.reset_color();
             target.next_line(console);
         }
+
+        self.to_re_render = false;
     }
 
     fn on_event(&mut self, event: &Event) -> std::io::Result<()> { 
@@ -75,6 +84,10 @@ impl Element for List {
         }
 
         Ok(())
+    }
+
+    fn needs_re_render(&self) -> bool {  
+        self.to_re_render
     }
 }
 

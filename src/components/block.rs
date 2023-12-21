@@ -137,6 +137,11 @@ impl Block {
         }
     }
 
+    pub fn reset_cursor(&self, console: &mut Console) {
+        console.move_to(self.cursor_x, self.cursor_y);
+        console.flush();
+    }
+
     pub fn write(&mut self, console: &mut Console, buf: &[u8]) {
         let mut in_escape_seq = false;
         let mut escape_seq = Vec::<u8>::new();
