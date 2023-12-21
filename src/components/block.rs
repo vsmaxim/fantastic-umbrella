@@ -1,21 +1,25 @@
-use std::io::{self, Write};
-use std::fmt;
+use crate::console::Console;
 
-use crossterm::{
-    cursor::{MoveTo, MoveToNextLine},
-    execute,
-};
+const BOX_LIGHT_BL_CORNER: &str = "└";
+const BOX_LIGHT_BR_CORNER: &str = "┘";
+const BOX_LIGHT_TR_CORNER: &str= "┐";
+const BOX_LIGHT_TL_CORNER: &str = "┌";
+const BOX_LIGHT_VERTICAL: &str = "│";
+const BOX_LIGHT_HORIZONTAL: &str = "─";
 
-use crate::console::{self, Console};
 
 pub struct Block {
     x: u16,
-    y: u16, 
+    y: u16,
+    full_x: u16,
+    full_y: u16,
     width: u16,
     height: u16,
     cursor_x: u16,
     cursor_y: u16,
+    has_border: bool,
 }
+
 
 impl Block {
     pub fn new(
@@ -23,12 +27,24 @@ impl Block {
         y: u16,
         width: u16,
         height: u16,
+        border: bool,
     ) -> Self {
+        let (inner_x, inner_y, aw, ah) = if border {
+            (x + 1, y + 1, width - 1, height - 1)
+        } else {
+            (x, y, width, height)
+        };
+
         Self { 
-            x, y,
-            width, height,
+            x: inner_x,
+            y: inner_y,
+            full_x: x,
+            full_y: y,
+            width: aw,
+            height: ah,
             cursor_x: x,
             cursor_y: y,
+            has_border: border,
         }
     }
 
@@ -46,6 +62,35 @@ impl Block {
     pub fn reset(&mut self) {
         self.cursor_x = self.x;
         self.cursor_y = self.y;
+    }
+
+    pub fn draw_border(&mut self, console: &mut Console) {
+        console.move_to(self.full_x, self.full_y);
+
+        // Top box part
+        console.write(BOX_LIGHT_TL_CORNER);
+        console.write(BOX_LIGHT_HORIZONTAL.repeat(self.width.into()));
+        console.write(BOX_LIGHT_TR_CORNER);
+
+        // Vertical lines
+        for cur_height in 1..self.height {
+            console.move_to(self.full_x, self.full_y + cur_height);
+            console.write(BOX_LIGHT_VERTICAL);
+            console.move_to(self.full_x + self.width + 1, self.full_y + cur_height);
+            console.write(BOX_LIGHT_VERTICAL);
+        }
+
+        // Bottom box part
+        console.move_to(self.full_x, self.full_y + self.height);
+        console.write(BOX_LIGHT_BL_CORNER);
+        console.write(BOX_LIGHT_HORIZONTAL.repeat(self.width.into()));
+        console.write(BOX_LIGHT_BR_CORNER);
+    }
+
+    pub fn render(&mut self, console: &mut Console) {
+        if self.has_border {
+            self.draw_border(console);
+        }
     }
 
     pub fn write(&mut self, console: &mut Console, buf: &[u8]) {

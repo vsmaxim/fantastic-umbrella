@@ -17,8 +17,8 @@ impl Application {
         let mut console = Console::new();
         let mut pty_view = PtyView::new(20, 80);
 
-        let mut left_pane = Block::new(0, 0, 40, 40);
-        let mut right_pane = Block::new(41, 0, 80, 40);
+        let mut left_pane = Block::new(0, 0, 40, 80, true);
+        let mut right_pane = Block::new(41, 0, 82, 22, true);
 
         let mut options_list = List::new(
             vec![
@@ -40,6 +40,9 @@ impl Application {
                 &mut console,
                 &mut right_pane,
             );
+
+            left_pane.render(&mut console);
+            right_pane.render(&mut console);
 
             console.flush();
 
