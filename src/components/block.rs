@@ -9,6 +9,11 @@ const BOX_LIGHT_TL_CORNER: &str = "┌";
 const BOX_LIGHT_VERTICAL: &str = "│";
 const BOX_LIGHT_HORIZONTAL: &str = "─";
 
+pub enum BlockState {
+    Inactive,
+    Selected,
+    Active,
+}
 
 pub struct Block {
     x: u16,
@@ -20,7 +25,7 @@ pub struct Block {
     cursor_x: u16,
     cursor_y: u16,
     has_border: bool,
-    active: bool,
+    state: BlockState,
 }
 
 
@@ -48,12 +53,28 @@ impl Block {
             cursor_x: x,
             cursor_y: y,
             has_border: border,
-            active: false,
+            state: BlockState::Inactive,
         }
     }
 
-    pub fn set_active(&mut self, active: bool) {
-        self.active = active;
+    pub fn set_state(&mut self, state: BlockState) {
+        self.state = state;
+    }
+    
+    pub fn is_selected(&self) -> bool {
+        if let BlockState::Selected = self.state {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        if let BlockState::Active = self.state {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn to_line_start(&mut self, console: &mut Console) {
@@ -80,8 +101,10 @@ impl Block {
     }
 
     pub fn draw_border(&mut self, console: &mut Console) {
-        if self.active {
+        if self.is_active() {
             console.set_fg_color(Color::Green);
+        } else if self.is_selected() {
+            console.set_fg_color(Color::Yellow);
         }
 
         console.move_to(self.full_x, self.full_y);
@@ -105,9 +128,7 @@ impl Block {
         console.write(BOX_LIGHT_HORIZONTAL.repeat(self.width.into()));
         console.write(BOX_LIGHT_BR_CORNER);
 
-        if self.active {
-            console.reset_color();
-        }
+        console.reset_color();
     }
 
     pub fn render(&mut self, console: &mut Console) {

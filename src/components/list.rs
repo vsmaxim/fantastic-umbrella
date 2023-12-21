@@ -1,7 +1,7 @@
 use std::{fmt, io};
 
 use crossterm::cursor::MoveTo;
-use crossterm::event::{Event, KeyCode, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyEvent};
 use crossterm::style::{Color, SetForegroundColor, SetBackgroundColor, Print, ResetColor};
 use crossterm::execute;
 
@@ -62,13 +62,15 @@ impl Element for List {
     }
 
     fn on_event(&mut self, event: &Event) -> std::io::Result<()> { 
-        if let Event::Key(key_event) = event {
-            if key_event.code == KeyCode::Up && key_event.kind == KeyEventKind::Press {
-                self.select_prev();
-            }
-
-            if key_event.code == KeyCode::Down && key_event.kind == KeyEventKind::Press {
-                self.select_next();
+        if let Event::Key(KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            ..
+        }) = event {
+            match code {
+                KeyCode::Up => self.select_prev(),
+                KeyCode::Down => self.select_next(),
+                _ => {}
             }
         }
 
