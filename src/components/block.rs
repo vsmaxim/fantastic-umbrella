@@ -1,3 +1,5 @@
+use crossterm::style::Color;
+
 use crate::console::Console;
 
 const BOX_LIGHT_BL_CORNER: &str = "└";
@@ -18,6 +20,7 @@ pub struct Block {
     cursor_x: u16,
     cursor_y: u16,
     has_border: bool,
+    active: bool,
 }
 
 
@@ -45,7 +48,12 @@ impl Block {
             cursor_x: x,
             cursor_y: y,
             has_border: border,
+            active: false,
         }
+    }
+
+    pub fn set_active(&mut self, active: bool) {
+        self.active = active;
     }
 
     pub fn to_line_start(&mut self, console: &mut Console) {
@@ -64,7 +72,18 @@ impl Block {
         self.cursor_y = self.y;
     }
 
+    pub fn empty(&mut self, console: &mut Console) {
+        for ch in 0..self.height {
+            console.move_to(self.x, self.y + ch);
+            console.write(" ".repeat(self.width.into()));
+        }
+    }
+
     pub fn draw_border(&mut self, console: &mut Console) {
+        if self.active {
+            console.set_fg_color(Color::Green);
+        }
+
         console.move_to(self.full_x, self.full_y);
 
         // Top box part
@@ -85,6 +104,10 @@ impl Block {
         console.write(BOX_LIGHT_BL_CORNER);
         console.write(BOX_LIGHT_HORIZONTAL.repeat(self.width.into()));
         console.write(BOX_LIGHT_BR_CORNER);
+
+        if self.active {
+            console.reset_color();
+        }
     }
 
     pub fn render(&mut self, console: &mut Console) {
