@@ -20,8 +20,8 @@ pub struct Block {
     y: u16,
     full_x: u16,
     full_y: u16,
-    width: u16,
-    height: u16,
+    pub width: u16,
+    pub height: u16,
     cursor_x: u16,
     cursor_y: u16,
     has_border: bool,
@@ -85,6 +85,11 @@ impl Block {
     pub fn next_line(&mut self, console: &mut Console) {
         self.cursor_y += 1;
         self.cursor_x = self.x;
+        console.move_to(self.cursor_x, self.cursor_y);
+    }
+
+    pub fn next_col(&mut self, console: &mut Console) {
+        self.cursor_x += 1;
         console.move_to(self.cursor_x, self.cursor_y);
     }
 

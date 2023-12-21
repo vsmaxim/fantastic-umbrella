@@ -1,6 +1,7 @@
 mod app;
 mod components;
 mod console;
+mod layout;
 
 use app::Application;
 

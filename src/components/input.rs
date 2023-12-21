@@ -48,8 +48,7 @@ impl Element for Input {
                         self.to_re_render = true;
                     }
                 },
-                KeyCode::Enter => {
-                },
+                KeyCode::Enter => {},
                 _ => {},
             }
         }
