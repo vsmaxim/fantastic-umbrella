@@ -1,0 +1,8 @@
+[
+  {
+    "method": "POST",
+    "title": "Create request",
+    "url": "http://google.com",
+    "body": "{\n  \"method\": \"POST\",\n  \"title\": \"Create request\",\n  \"url\": \"http://google.com\",\n  \"body\": \"hellooo\"\n}"
+  }
+]

@@ -30,7 +30,6 @@ pub struct Model {
     pub requests: Arc<RwLock<Vec<Arc<Request>>>>,
 }
 
-
 impl Model {
     pub fn new(requests: Vec<Request>) -> Self {
         let arc_r: Vec<Arc<Request>> = requests
@@ -81,7 +80,23 @@ impl Model {
                 .expect("Couldn't parse")
             )
         } else {
-            Self::new(Vec::new())
+            let req = Request {
+                method: "POST".into(),
+                title: "Create request".into(),
+                url: "http://google.com".into(),
+                body: "hellooo".into(),
+            };
+
+            let ret = Self::new(vec![
+                Request {
+                    method: "POST".into(),
+                    title: "Create request".into(),
+                    url: "http://google.com".into(),
+                    body: serde_json::to_string_pretty(&req).unwrap().into(),
+                }
+            ]);
+            ret.save_on_disk();
+            ret
         }
     }
 }

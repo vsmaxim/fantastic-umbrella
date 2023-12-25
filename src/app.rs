@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
-use crossterm::{event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, style::Stylize};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
 use crate::{
     components::{
         element::Element,
         list::List,
-        tty::PtyView,
         input::Input,
-        shortcuts::ShortcutsView,
+        shortcuts::ShortcutsView, editor::Editor,
     },
     console::Console,
     layout::Layout,
@@ -20,7 +19,7 @@ pub struct Application {
     layout: Layout,
     input: Input,
     options: List,
-    pty: PtyView,
+    editor: Editor,
     shortcuts: ShortcutsView,
     current_request: Option<Request>,
 }
@@ -37,10 +36,7 @@ impl Application {
                 Arc::clone(&model.requests),
                 layout.list_cont.width.into(),
             ),
-            pty: PtyView::new(
-                layout.req_cont.height,
-                layout.req_cont.width,
-            ),
+            editor: Editor::new(),
             shortcuts: ShortcutsView::new(),
             model,
             layout,
@@ -53,6 +49,7 @@ impl Application {
             let request = Request::from(request_ptr.as_ref());
             self.options.option_selected = false;
             self.input.set_val(&request.url);
+            self.editor.set_val(&request.body);
             self.current_request = Some(request);
             self.layout.enter_select_mode();
         }
@@ -79,8 +76,8 @@ impl Application {
                 self.options.output(&mut console, &mut self.layout.list_cont);
             }
 
-            if self.pty.needs_re_render() {
-                self.pty.output(&mut console, &mut self.layout.req_cont);
+            if self.editor.needs_re_render() {
+                self.editor.output(&mut console, &mut self.layout.req_cont);
             }
 
             if self.input.needs_re_render() {
@@ -121,7 +118,7 @@ impl Application {
                                     self.options.on_event(&event)?;
                                     self.check_option_selected();
                                 } else if self.layout.req_cont.is_active() {  
-                                    self.pty.on_event(&event)?;
+                                    self.editor.on_event(&event)?;
                                 } else if self.layout.input_cont.is_active() {
                                     self.input.on_event(&event)?;
                                 }
