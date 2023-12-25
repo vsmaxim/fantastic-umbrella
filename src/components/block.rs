@@ -190,8 +190,6 @@ impl Block {
                     self.cursor_x = self.x + coords[1] - 1;
                     self.cursor_y = self.y + coords[0] - 1;
 
-                    println!("{} {}", self.cursor_x, self.cursor_y);
-
                     in_escape_seq = false;
                     escape_seq.clear();
                     continue;

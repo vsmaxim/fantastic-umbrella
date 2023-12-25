@@ -17,6 +17,11 @@ impl Input {
             to_re_render: true,
         }
     }
+
+    pub fn set_val(&mut self, val: &str) {
+        self.value = String::from(val);
+        self.to_re_render = true;
+    }
 }
 
 impl Element for Input {

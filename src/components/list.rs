@@ -2,41 +2,42 @@ use crossterm::event::{Event, KeyCode, KeyEventKind, KeyEvent};
 use crossterm::style::Color;
 
 use crate::console::Console;
+use crate::model::Request;
 
+use std::sync::{Arc, RwLock};
 use super::block::Block;
 use super::element::Element;
 
 
-pub struct Request {
-    pub method: String,
-    pub title: String,
-}
-
 pub struct List {
-    values: Vec<Request>,
-    selected: usize,
-    max_method_len: usize,
+    values: Arc<RwLock<Vec<Arc<Request>>>>,
+    pub selected: usize,
+    pub option_selected: bool,
     to_re_render: bool,
     width: usize,
 }
 
 impl List {
-    pub fn new(options: Vec<Request>, width: usize) -> Self {
+    pub fn new(options: Arc<RwLock<Vec<Arc<Request>>>>, width: usize) -> Self {
         Self {
-            max_method_len: options
-                .iter()
-                .map(|v| v.method.len())
-                .max()
-                .unwrap_or(0),
-            width: width,
-            values: options,
+            width,
             selected: 0,
+            values: options,
+            option_selected: false,
             to_re_render: true,
         }
     }
 
+    fn get_max_method_length(&self) -> usize {
+        self.values
+            .read().unwrap()
+            .iter()
+            .map(|v| (*v).method.len())
+            .max().unwrap_or(0)
+    }
+
     fn select_next(&mut self) {
-        if self.selected < self.values.len() - 1 {
+        if self.selected < self.values.read().unwrap().len() - 1 {
             self.selected += 1;
         }
 
@@ -59,8 +60,9 @@ impl Element for List {
         target: &mut Block,
     ) { 
         target.reset();
+        let max_method_len = self.get_max_method_length();
 
-        for (i, option) in self.values.iter().enumerate() {
+        for (i, option) in self.values.read().unwrap().iter().enumerate() {
             let (fg_color, bg_color) = if i == self.selected {
                 (Color::Black, Color::White)
             } else {
@@ -73,7 +75,7 @@ impl Element for List {
                 (Color::White, Color::Black)
             };
 
-            let pad = self.max_method_len - option.method.len() + 2;
+            let pad = max_method_len - option.method.len() + 2;
             let pad_left = std::cmp::max(1, pad / 2); 
             let pad_right = pad - pad_left;
 
@@ -109,6 +111,7 @@ impl Element for List {
             match code {
                 KeyCode::Up => self.select_prev(),
                 KeyCode::Down => self.select_next(),
+                KeyCode::Enter => self.option_selected = true,
                 _ => {}
             }
         }
