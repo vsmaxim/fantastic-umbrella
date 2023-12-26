@@ -59,15 +59,12 @@ impl Application {
         let mut console = Console::new();
 
         console.enter_full_screen();
+
         self.options.output(&mut console, &mut self.layout.list_cont);
         self.shortcuts.output(&mut console, &mut self.layout.hint_cont);
+        self.layout.render(&mut console);
 
         loop {
-            console.hide_cursor();
-            console.flush();
-
-            self.layout.render(&mut console);
-
             if self.shortcuts.needs_re_render() {
                 self.shortcuts.output(&mut console, &mut self.layout.hint_cont);
             }
@@ -84,13 +81,6 @@ impl Application {
                 self.input.output(&mut console, &mut self.layout.input_cont);
             }
 
-            if self.layout.req_cont.is_active() {
-                self.layout.req_cont.reset_cursor(&mut console);
-                console.show_cursor();
-            } 
-
-            console.flush();
-
             if event::poll(std::time::Duration::from_millis(10))? {
                 let event = event::read()?;
 
@@ -106,12 +96,14 @@ impl Application {
                             },
                             _ => {
                                 self.layout.navigate(&event, &mut console);
+                                console.hide_cursor()
                             }
                         }
                     } else {
                         match code {
                             KeyCode::Esc => {
                                 self.layout.enter_select_mode();
+                                console.hide_cursor();
                             },
                             _ => {
                                 if self.layout.list_cont.is_active() {

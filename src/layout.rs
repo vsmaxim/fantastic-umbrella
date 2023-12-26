@@ -30,7 +30,6 @@ impl Layout {
         let req_cont = Block::new(left_col_width + 1, input_height, right_col_width, req_height, true);
         let hint_cont = Block::new(0, list_height, width - 1, hint_height, true);
 
-
         Self {
             select_mode: true,
             list_cont,
@@ -120,7 +119,6 @@ impl Layout {
                         } 
 
                         if self.req_cont.is_selected() {
-                            console.show_cursor();
                             self.req_cont.set_state(BlockState::Active);
                             self.req_cont.render(console);
                         }

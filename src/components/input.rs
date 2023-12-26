@@ -26,15 +26,19 @@ impl Input {
 
 impl Element for Input {
     fn output(&mut self, console: &mut crate::console::Console, target: &mut super::block::Block) {
-        target.reset();
+        if self.to_re_render {
+            target.reset();
 
-        if self.to_empty {
-            self.to_empty = false;
-            target.empty(console);
+            if self.to_empty {
+                self.to_empty = false;
+                target.empty(console);
+            }
+
+            target.write(console, self.value.as_bytes());
+            console.show_cursor();
         }
 
-        target.write(console, self.value.as_bytes());
-        self.to_re_render = true;
+        self.to_re_render = false;
     }
 
     fn on_event(&mut self, event: &crossterm::event::Event) -> std::io::Result<()> { 

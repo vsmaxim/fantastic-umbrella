@@ -177,6 +177,18 @@ impl Block {
             if in_escape_seq {
                 escape_seq.push(b);
 
+                // Check if the escape sequence is for cursor visibility control
+                let is_cursor_visibility_control = 
+                    escape_seq == [0x1B, 0x5B, 0x3F, 0x32, 0x35, 0x6C] || // ESC[?25l
+                    escape_seq == [0x1B, 0x5B, 0x3F, 0x32, 0x35, 0x68];   // ESC[?25h
+
+                if is_cursor_visibility_control {
+                    // Reset the escape sequence processing and continue without handling
+                    in_escape_seq = false;
+                    escape_seq.clear();
+                    continue;
+                }
+
                 if b == 0x48 { // Escape sequence is position control
                     let pos = String::from_utf8_lossy(&escape_seq[2..escape_seq.len() - 1]);
 
@@ -213,6 +225,13 @@ impl Block {
             }
         }
 
+        console.flush();
+    }
+
+    pub fn move_to(&mut self, console: &mut Console, x: u16, y: u16) {
+        console.move_to(0, 20);
+        console.write(format!("({},{})", x, y));
+        console.move_to(self.x + x, self.y + y - 1);
         console.flush();
     }
 
