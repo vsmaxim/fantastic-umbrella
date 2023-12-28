@@ -98,10 +98,21 @@ impl Block {
         self.cursor_y = self.y;
     }
 
+    pub fn empty_line(&mut self, console: &mut Console, line: u16) {
+        console.move_to(self.x, self.y + line);
+        console.write(" ".repeat((self.width - 1) as usize));
+        console.flush();
+    }
+
     pub fn empty(&mut self, console: &mut Console) {
-        for ch in 0..self.height {
-            console.move_to(self.x, self.y + ch);
-            console.write(" ".repeat(self.width.into()));
+        for line in 0..self.height {
+            self.empty_line(console, line);
+        }
+    }
+
+    pub fn empty_after(&mut self, console: &mut Console, line: u16) {
+        for cl in line..self.height {
+            self.empty_line(console, cl);
         }
     }
 
@@ -190,6 +201,8 @@ impl Block {
                 }
 
                 if b == 0x48 { // Escape sequence is position control
+                    self.reset_cursor(console);
+
                     let pos = String::from_utf8_lossy(&escape_seq[2..escape_seq.len() - 1]);
 
                     let coords: Vec<u16> = pos
@@ -197,8 +210,6 @@ impl Block {
                         .map(|v| v.parse::<u16>().unwrap())
                         .collect();
 
-
-                    console.move_to(0, 100);
                     self.cursor_x = self.x + coords[1] - 1;
                     self.cursor_y = self.y + coords[0] - 1;
 
@@ -229,9 +240,10 @@ impl Block {
     }
 
     pub fn move_to(&mut self, console: &mut Console, x: u16, y: u16) {
-        console.move_to(0, 20);
-        console.write(format!("({},{})", x, y));
-        console.move_to(self.x + x, self.y + y - 1);
+        self.cursor_x = self.x + x;
+        self.cursor_y = self.y + y;
+
+        console.move_to(self.cursor_x, self.cursor_y);
         console.flush();
     }
 
