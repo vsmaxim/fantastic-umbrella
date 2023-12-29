@@ -18,6 +18,10 @@ impl Input {
         }
     }
 
+    pub fn get_value(&self) -> String {
+        String::from(self.value.trim())
+    }
+
     pub fn set_val(&mut self, val: &str) {
         self.value = String::from(val);
         self.to_re_render = true;

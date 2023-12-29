@@ -44,22 +44,24 @@ impl Model {
         let lock_clone = self.requests.clone();
         let mut write = lock_clone.write().unwrap();
         write.push(Arc::new(r));
+        drop(write);
         self.save_on_disk();
     }
 
-    pub fn update_request(&mut self, i: usize, r: Request) {
+    pub fn update_request(&mut self, i: usize, r: &Request) {
         let lock_clone = self.requests.clone();
         let mut write = lock_clone.write().unwrap();
-        write[i] = Arc::new(r); 
+        write[i] = Arc::new(Request::from(r)); 
+        drop(write);
         self.save_on_disk();
     }
 
     pub fn save_on_disk(&self) {
-        let file = File::create(&CONFIG_PATH)
-            .expect("Couldn't create config file");
-
         let lock_clone = self.requests.clone();
         let read = lock_clone.read().unwrap();
+
+        let file = File::create(&CONFIG_PATH)
+            .expect("Couldn't create config file");
 
         // TODO: Avoid copying perhaps?
         let serializable: Vec<Request> = read.iter()
@@ -68,6 +70,9 @@ impl Model {
 
         serde_json::to_writer_pretty(file, &serializable)
             .expect("Couldn't write file");
+    }
+
+    pub fn make_request(&self, request: &Request) {
     }
 
     pub fn load_from_disk_or_default() -> Self {

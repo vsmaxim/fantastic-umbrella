@@ -39,6 +39,10 @@ impl Editor {
             refresh: true,
         }
     }
+    
+    pub fn get_body(&self) -> String {
+        self.body.join("")
+    }
 
     pub fn set_val(&mut self, val: &str) {
         self.body = val.split("\n")

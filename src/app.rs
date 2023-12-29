@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::{
     components::{
@@ -22,6 +22,7 @@ pub struct Application {
     editor: Editor,
     shortcuts: ShortcutsView,
     current_request: Option<Request>,
+    current_request_id: Option<usize>,
 }
 
 impl Application {
@@ -31,6 +32,7 @@ impl Application {
 
         Self {
             current_request: None,
+            current_request_id: None,
             input: Input::new(),
             options: List::new(
                 Arc::clone(&model.requests),
@@ -51,6 +53,7 @@ impl Application {
             self.input.set_val(&request.url);
             self.editor.set_val(&request.body);
             self.current_request = Some(request);
+            self.current_request_id = Some(self.options.selected);
             self.layout.enter_select_mode();
         }
     }
@@ -93,6 +96,37 @@ impl Application {
                         match code {
                             KeyCode::Esc => {
                                 break;
+                            },
+                            KeyCode::Char(c) => {
+
+                                if c == 's' {
+                                    self.current_request
+                                        .as_ref()
+                                        .map(|r| Request {
+                                            title: r.title.to_string(),
+                                            method: r.method.to_string(),
+                                            url: self.input.get_value(),
+                                            body: self.editor.get_body(),
+                                        })
+                                        .and_then(|r| {
+                                            console.move_to(0, 50);
+                                            console.write("saved on disk");
+                                            console.flush();
+
+                                            if let Some(req_id) = self.current_request_id {
+                                                self.model.update_request(req_id, &r);
+                                                Some(r)
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                }
+
+                                if c == 'e' {
+                                    if let Some(req) = &self.current_request {
+                                        self.model.make_request(req);
+                                    }
+                                }
                             },
                             _ => {
                                 self.layout.navigate(&event, &mut console);

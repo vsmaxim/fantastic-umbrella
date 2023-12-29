@@ -16,7 +16,10 @@ impl Element for ShortcutsView {
     fn output(&mut self, console: &mut crate::console::Console, target: &mut super::block::Block) { 
         console.reset_color();
         target.reset();
-        target.write(console, "^s Send".as_bytes());
+
+        target.write(console, "[s] Send".as_bytes());
+        target.write(console, " [e] Execute".as_bytes());
+
         console.flush();
         self.to_re_render = false;
     }
