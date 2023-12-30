@@ -107,6 +107,7 @@ impl Application {
                                             method: r.method.to_string(),
                                             url: self.input.get_value(),
                                             body: self.editor.get_body(),
+                                            query_params: vec![],
                                         })
                                         .and_then(|r| {
                                             console.move_to(0, 50);
