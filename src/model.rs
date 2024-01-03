@@ -2,11 +2,16 @@ use std::fs::{File, self};
 use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
-use oapi::OApi;
+use oapi::{OApi, OApiOperation};
 use sppparse::{SparsePointer, SparseRoot};
 
 use crate::paths::Paths;
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PathParam {
+    pub name: String,
+    pub param_type: String,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Request {
@@ -15,8 +20,31 @@ pub struct Request {
     pub url: String,
     pub body: String,
     pub query_params: Vec<String>,
+    pub path_params: Vec<PathParam>,
 }
 
+impl Request {
+    pub fn new_default() -> Request {
+        Request {
+            method: String::new(),
+            title: String::new(),
+            url: String::new(),
+            body: String::new(),
+            query_params: Vec::new(),
+            path_params: Vec::new(),
+        }
+    }
+    pub fn new(method: &str, title: &str, url: &str, body: &str) -> Request {
+        Request {
+            method: method.to_string(),
+            title: title.to_string(),
+            url: url.to_string(),
+            body: body.to_string(),
+            query_params: Vec::new(),
+            path_params: Vec::new(),
+        }
+    }
+}
 
 impl From<&Request> for Request {
     fn from(v: &Self) -> Self {
@@ -26,6 +54,7 @@ impl From<&Request> for Request {
             url: String::from(&v.url),
             body: String::from(&v.body),
             query_params: vec![],
+            path_params: vec![],
         }
     }
 }
@@ -77,16 +106,14 @@ impl Model {
             .expect("Couldn't write file");
     }
 
-    pub fn make_request(&self, request: &Request) {
-
-    }
+    pub fn make_request(&self, request: &Request) {}
 
     pub fn import_from_openapi(spec_path: PathBuf) -> Self {
         let sparse_root = SparseRoot::new_from_file(spec_path).expect("Failed to parse the openapi");
 
         let doc: OApi = OApi::new(sparse_root);
-        let mut ret = Vec::new();
         let root = doc.root_get().unwrap();
+        let mut requests = Vec::new();
 
         let mut base_url = &"".to_string();
 
@@ -100,52 +127,31 @@ impl Model {
         }
 
         for (key, val) in root.paths().iter() {
-            let mut request = Request {
-                method: "".to_string(),
-                title: "".to_string(),
-                url: format!("{}{}", base_url, key),
-                body: "".to_string(),
-                query_params: vec![],
-            };
+            for (method, operation) in [
+                ("GET", val.get()),
+                ("POST", val.post()),
+                ("PUT", val.put()),
+            ].iter().filter_map(|&(m, v)| v.clone().map(|op| (m, op))) {
+                let mut request = Request::new_default();
+                request.method = method.to_string();
+                request.title = operation.summary().clone().unwrap_or_default();
 
-            let mut oapi_operation;
-
-            match val.get() {
-                Some(value) => {
-                    request.method = "GET".to_string();
-                    oapi_operation = value;
-
-                    for par in oapi_operation.parameters().iter() {
-                        match par.get() {
-                            Ok(result) => {
-                                request.query_params.push(result.name().clone());
-                            }
-                            Err(_) => {}
+                for par in operation.clone().parameters().iter() {
+                    match par.get() {
+                        Ok(result) => {
+                            request.query_params.push(result.name().clone());
                         }
+                        Err(_) => {}
                     }
                 }
-                _ => {}
-            }
 
-            match val.post() {
-                Some(value) => {
-                    request.method = "POST".to_string();
-                    oapi_operation = value;
-                }
-                _ => {}
-            }
-            match val.put() {
-                Some(value) => {
-                    request.method = "PUT".to_string();
-                    oapi_operation = value;
-                }
-                _ => {}
-            }
 
-            ret.push(request);
+
+                requests.push(request);
+            }
         }
 
-        return Self::new(ret);
+        return Self::new(requests);
     }
 
     pub fn load_from_disk_or_default() -> Self {
@@ -166,6 +172,7 @@ impl Model {
                 url: "http://google.com".into(),
                 body: "hellooo".into(),
                 query_params: vec![],
+                path_params: vec![],
             };
 
             let ret = Self::new(vec![
@@ -175,6 +182,7 @@ impl Model {
                     url: "http://google.com".into(),
                     body: serde_json::to_string_pretty(&req).unwrap().into(),
                     query_params: vec![],
+                    path_params: vec![],
                 }
             ]);
             ret.save_on_disk();

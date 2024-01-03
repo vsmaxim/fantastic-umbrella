@@ -108,6 +108,7 @@ impl Application {
                                             url: self.input.get_value(),
                                             body: self.editor.get_body(),
                                             query_params: vec![],
+                                            path_params: vec![],
                                         })
                                         .and_then(|r| {
                                             console.move_to(0, 50);
