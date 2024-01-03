@@ -1,12 +1,12 @@
 use std::fs::{File, self};
 use std::sync::{Arc, RwLock};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
-use oapi::{OApi};
+use oapi::OApi;
 use sppparse::{SparsePointer, SparseRoot};
 
+use crate::paths::Paths;
 
-const CONFIG_PATH: &str = "openapi/petstore.yaml";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Request {
@@ -64,9 +64,9 @@ impl Model {
     pub fn save_on_disk(&self) {
         let lock_clone = self.requests.clone();
         let read = lock_clone.read().unwrap();
+        let save_path = Paths::config_path();
 
-        let file = File::create(&CONFIG_PATH)
-            .expect("Couldn't create config file");
+        let file = File::create(save_path).expect("Couldn't create config file");
 
         // TODO: Avoid copying perhaps?
         let serializable: Vec<Request> = read.iter()
@@ -77,84 +77,88 @@ impl Model {
             .expect("Couldn't write file");
     }
 
-    pub fn make_request(&self, request: &Request) {}
+    pub fn make_request(&self, request: &Request) {
 
-    pub fn load_from_disk_or_default() -> Self {
-        if Path::new(CONFIG_PATH).exists() {
-            if CONFIG_PATH.ends_with(".yaml") || CONFIG_PATH.ends_with(".yml") {
-                let doc: OApi = OApi::new(
-                    SparseRoot::new_from_file(PathBuf::from(CONFIG_PATH))
-                        .expect("Failed to parse the openapi"),
-                );
-                let mut ret = Vec::new();
-                let root = doc.root_get().unwrap();
+    }
 
-                let mut base_url = &"".to_string();
-                match root.servers() {
-                    None => {}
-                    Some(servers) => {
-                        for (s) in servers.iter() {
-                            base_url = s.url();
-                        }
-                    }
+    pub fn import_from_openapi(spec_path: PathBuf) -> Self {
+        let sparse_root = SparseRoot::new_from_file(spec_path).expect("Failed to parse the openapi");
+
+        let doc: OApi = OApi::new(sparse_root);
+        let mut ret = Vec::new();
+        let root = doc.root_get().unwrap();
+
+        let mut base_url = &"".to_string();
+
+        match root.servers() {
+            None => {}
+            Some(servers) => {
+                for s in servers.iter() {
+                    base_url = s.url();
                 }
+            }
+        }
 
-                for (key, val) in root.paths().iter() {
-                    let mut request = Request {
-                        method: "".to_string(),
-                        title: "".to_string(),
-                        url: format!("{}{}", base_url, key),
-                        body: "".to_string(),
-                        query_params: vec![],
-                    };
+        for (key, val) in root.paths().iter() {
+            let mut request = Request {
+                method: "".to_string(),
+                title: "".to_string(),
+                url: format!("{}{}", base_url, key),
+                body: "".to_string(),
+                query_params: vec![],
+            };
 
-                    let mut oapi_operation;
+            let mut oapi_operation;
 
-                    match val.get() {
-                        Some(value) => {
-                            request.method = "GET".to_string();
-                            oapi_operation = value;
+            match val.get() {
+                Some(value) => {
+                    request.method = "GET".to_string();
+                    oapi_operation = value;
 
-                            for par in oapi_operation.parameters().iter() {
-                                match par.get() {
-                                    Ok(result) => {
-                                        request.query_params.push(result.name().clone());
-                                    }
-                                    Err(_) => {}
-                                }
+                    for par in oapi_operation.parameters().iter() {
+                        match par.get() {
+                            Ok(result) => {
+                                request.query_params.push(result.name().clone());
                             }
+                            Err(_) => {}
                         }
-                        _ => {}
                     }
-
-                    match val.post() {
-                        Some(value) => {
-                            request.method = "POST".to_string();
-                            oapi_operation = value;
-                        }
-                        _ => {}
-                    }
-                    match val.put() {
-                        Some(value) => {
-                            request.method = "PUT".to_string();
-                            oapi_operation = value;
-                        }
-                        _ => {}
-                    }
-
-                    ret.push(request);
                 }
-
-                return Self::new(ret);
+                _ => {}
             }
 
-            let content = fs::read_to_string(CONFIG_PATH)
+            match val.post() {
+                Some(value) => {
+                    request.method = "POST".to_string();
+                    oapi_operation = value;
+                }
+                _ => {}
+            }
+            match val.put() {
+                Some(value) => {
+                    request.method = "PUT".to_string();
+                    oapi_operation = value;
+                }
+                _ => {}
+            }
+
+            ret.push(request);
+        }
+
+        return Self::new(ret);
+    }
+
+    pub fn load_from_disk_or_default() -> Self {
+        let config_path = Paths::config_path();
+        let openapi_spec_path = Paths::openapi_path();
+
+        if config_path.exists() {
+            let content = fs::read_to_string(config_path)
                 .expect("Couldn't read file");
 
-            Self::new(
-                serde_json::from_str(&content)
-                    .expect("Couldn't parse")
-            )
+            Self::new(serde_json::from_str(&content).expect("Couldn't parse"))
+        } else if openapi_spec_path.exists() {
+            Self::import_from_openapi(openapi_spec_path)
         } else {
             let req = Request {
                 method: "POST".into(),
